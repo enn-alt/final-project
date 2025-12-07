@@ -5,6 +5,7 @@ import os, sys, pygame, math, maps
 from pygame.locals import *
 from random import randint
 from loader import load_image
+from pygame import Rect
 
 GRASS_SPEED = 0.715
 GRASS_GREEN = 75
@@ -117,11 +118,14 @@ class Player(pygame.sprite.Sprite):
             self.emit_tracks()   
         self.image, self.rect = rot_center(self.image_orig, self.rect, self.dir)
 
-#fix this function 
+#fix this function
     def update(self, last_x, last_y):
         self.x = self.x + self.speed * math.cos(math.radians(270-self.dir))
         self.y = self.y + self.speed * math.sin(math.radians(270-self.dir))
         self.reset_tracks()
+
+    def world_rect(self) -> Rect:
+        return Rect(self.x, self.y, self.image.get_width(), self.image.get_height())
         
 
 
