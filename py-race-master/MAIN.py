@@ -2,6 +2,7 @@
 
 import os, sys, pygame, random, array, gamemode
 import direction,  bounds, timeout, menu
+import race_state
 from pygame.locals import *
 
 #Import game modules.
@@ -27,6 +28,7 @@ def main():
     time_alert = timeout.Alert()
     info = menu.Alert()
     pointer = direction.Tracker(int(CENTER_W * 2), int(CENTER_H * 2))
+    race = race_state.RaceState()
 #create sprite groups.
     map_s     = pygame.sprite.Group()
     player_s  = pygame.sprite.Group()
@@ -63,12 +65,17 @@ def main():
     player_s.add(car)
 
     cam.set_pos(car.x, car.y)
+    finish_line_rect = race_state.build_start_finish_line()
 
     while running:
 #Render loop.
 
 #Check for key input. (KEYDOWN, trigger often)
         keys = pygame.key.get_pressed()
+
+#Lap detection based on world coordinates
+        car_rect = car.world_rect()
+        race.process_crossing(car_rect, finish_line_rect)
 
 #Check for menu/reset, (keyup event - trigger ONCE)
         for event in pygame.event.get():
@@ -81,6 +88,7 @@ def main():
                 if (keys[K_p]):
                     car.reset()
                     target.reset()
+                    race.reset()
                 if (keys[K_q]):
                     pygame.quit()
                     sys.exit(0)
@@ -88,7 +96,7 @@ def main():
             if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                 running = False
                 break
-        if (target.timeleft > 0):
+        if (target.timeleft > 0 and not race.race_finished):
             if keys[K_LEFT]:
                 car.steerleft()
             if keys[K_RIGHT]:
@@ -99,6 +107,8 @@ def main():
                 car.soften()
             if keys[K_DOWN]:
                 car.deaccelerate()
+        elif race.race_finished:
+            car.speed = 0
 
         cam.set_pos(car.x, car.y)
 
@@ -111,6 +121,8 @@ def main():
 
         text_timer = font.render('Timer: ' + str(int((target.timeleft / 60)/60)) + ":" + str(int((target.timeleft / 60) % 60)), 1, (224, 16, 16))
         textpos_timer = text_fps.get_rect(centery=65, centerx=60)
+        text_laps = font.render('Laps: ' + str(race.lap_count) + '/' + str(race.max_laps), 1, (224, 16, 16))
+        textpos_laps = text_fps.get_rect(centery=85, centerx=60)
 
 #Render Scene.
         screen.blit(background, (0,0))
@@ -150,13 +162,18 @@ def main():
             car.speed = 0
             text_score = font.render('Final Score: ' + str(target.score), 1, (224, 16, 16))
             textpos_score = text_fps.get_rect(centery=CENTER_H+56, centerx=CENTER_W-20)
+        if race.race_finished:
+            race_done_text = font.render('Race Complete', True, (255, 215, 0))
+            race_done_rect = race_done_text.get_rect(center=(CENTER_W, 120))
+            screen.blit(race_done_text, race_done_rect)
         if (info.visibility == True):
             menu_alert_s.draw(screen)
-            
-#Blit Blit..       
+
+#Blit Blit..
         screen.blit(text_fps, textpos_fps)
         screen.blit(text_score, textpos_score)
         screen.blit(text_timer, textpos_timer)
+        screen.blit(text_laps, textpos_laps)
         pygame.display.flip()
 
 #Check collision!!!
